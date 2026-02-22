@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Scout Board">
+<link rel="manifest" href="manifest.json">
+<title>Scout Dashboard</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0d1117; color: #e6edf3; min-height: 100vh; }
+  
+  /* PASSWORD GATE */
+  #gate { display: flex; justify-content: center; align-items: center; min-height: 100vh; flex-direction: column; gap: 20px; }
+  #gate h1 { color: #c9a84c; font-size: 24px; }
+  #gate input { background: #161b22; border: 1px solid #21262d; color: #e6edf3; padding: 12px 20px; border-radius: 8px; font-size: 16px; text-align: center; width: 200px; outline: none; }
+  #gate input:focus { border-color: #c9a84c; }
+  #gate button { background: #c9a84c; color: #0d1117; border: none; padding: 12px 32px; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; }
+  #gate .error { color: #f85149; font-size: 13px; display: none; }
+  #gate .logo { font-size: 48px; color: #c9a84c; font-weight: 800; margin-bottom: 10px; }
+
+  /* BOARD */
+  #board { display: none; }
+  .header { padding: 20px 32px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #21262d; flex-wrap: wrap; gap: 10px; }
+  .header h1 { font-size: 22px; font-weight: 700; color: #c9a84c; }
+  .header .stats { font-size: 13px; color: #8b949e; }
+  .header .stats span { color: #c9a84c; font-weight: 600; }
+  
+  .board { display: flex; gap: 16px; padding: 24px; overflow-x: auto; min-height: calc(100vh - 80px); align-items: flex-start; }
+  
+  .column { min-width: 300px; max-width: 320px; flex-shrink: 0; background: #161b22; border-radius: 12px; border: 1px solid #21262d; }
+  .column-header { padding: 14px 16px; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #21262d; }
+  .column-header .count { background: #21262d; color: #8b949e; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+  
+  .col-urgent .column-header { color: #f85149; border-top: 3px solid #f85149; border-radius: 12px 12px 0 0; }
+  .col-progress .column-header { color: #d29922; border-top: 3px solid #d29922; border-radius: 12px 12px 0 0; }
+  .col-waiting .column-header { color: #58a6ff; border-top: 3px solid #58a6ff; border-radius: 12px 12px 0 0; }
+  .col-recurring .column-header { color: #a371f7; border-top: 3px solid #a371f7; border-radius: 12px 12px 0 0; }
+  .col-done .column-header { color: #3fb950; border-top: 3px solid #3fb950; border-radius: 12px 12px 0 0; }
+  
+  .cards { padding: 8px; display: flex; flex-direction: column; gap: 8px; max-height: calc(100vh - 160px); overflow-y: auto; }
+  
+  .card { background: #0d1117; border: 1px solid #21262d; border-radius: 8px; padding: 14px; cursor: default; transition: border-color 0.15s; }
+  .card:hover { border-color: #388bfd; }
+  .card-title { font-size: 14px; font-weight: 600; margin-bottom: 6px; line-height: 1.3; }
+  .card-note { font-size: 12px; color: #8b949e; line-height: 1.4; margin-bottom: 8px; }
+  .card-meta { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .tag { font-size: 11px; padding: 2px 8px; border-radius: 12px; font-weight: 500; }
+  .tag-high { background: rgba(248,81,73,0.15); color: #f85149; }
+  .tag-medium { background: rgba(210,153,34,0.15); color: #d29922; }
+  .tag-low { background: rgba(139,148,158,0.15); color: #8b949e; }
+  .tag-person { background: rgba(56,139,253,0.15); color: #58a6ff; }
+  .tag-due { background: rgba(163,113,247,0.15); color: #a371f7; }
+  
+  .card-priority-high { border-left: 3px solid #f85149; }
+  .card-priority-medium { border-left: 3px solid #d29922; }
+  .card-priority-low { border-left: 3px solid #8b949e; }
+
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #21262d; border-radius: 3px; }
+
+  @media (max-width: 768px) {
+    .board { padding: 12px; gap: 12px; }
+    .column { min-width: 280px; }
+    .header { padding: 16px; }
+    .header h1 { font-size: 18px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <div class="logo">🦊</div>
+  <h1>Scout Dashboard</h1>
+  <input type="password" id="passInput" placeholder="Enter code" autofocus>
+  <button onclick="checkPass()">Enter</button>
+  <div class="error" id="passError">Incorrect code</div>
+</div>
+
+<div id="board">
+  <div class="header">
+    <h1>Scout Task Board</h1>
+    <div class="stats">
+      <span>5</span> Urgent &nbsp;|&nbsp; <span>3</span> In Progress &nbsp;|&nbsp; <span>5</span> Waiting &nbsp;|&nbsp; <span>3</span> Recurring &nbsp;|&nbsp; <span>6</span> Done
+    </div>
+  </div>
+
+  <div class="board">
+    <!-- URGENT -->
+    <div class="column col-urgent">
+      <div class="column-header">Urgent / Action Needed <span class="count">5</span></div>
+      <div class="cards">
+        <div class="card card-priority-high">
+          <div class="card-title">12740 Mendota Rent Recovery</div>
+          <div class="card-note">Demand letter sent 2/16 to Holly Tiller. $1,555.98. 10 business day deadline. Need wire/check instructions from Nathan.</div>
+          <div class="card-meta">
+            <span class="tag tag-high">High</span>
+            <span class="tag tag-person">Scout</span>
+            <span class="tag tag-due">Due 2/26</span>
+          </div>
+        </div>
+        <div class="card card-priority-high">
+          <div class="card-title">Marriott Casa Maat - 116K Points</div>
+          <div class="card-note">Emailed Debra Camperud (OCA). 116K points charged without authorization. Case #809327366.</div>
+          <div class="card-meta">
+            <span class="tag tag-high">High</span>
+            <span class="tag tag-person">Scout</span>
+          </div>
+        </div>
+        <div class="card card-priority-high">
+          <div class="card-title">Broken Yolk - Missing Statements</div>
+          <div class="card-note">16 of 21 merchant statements missing. Draft to Tawny/Ricardo ready. Deadline: Fri 2/28.</div>
+          <div class="card-meta">
+            <span class="tag tag-high">High</span>
+            <span class="tag tag-person">Nathan</span>
+            <span class="tag tag-due">Due 2/28</span>
+          </div>
+        </div>
+        <div class="card card-priority-high">
+          <div class="card-title">Brake Fluid Sensor - Au Pair's Car</div>
+          <div class="card-note">Warning light at 74,857mi. Fluid levels fine, likely sensor. 3 mechanics contacted. Calling Mon AM.</div>
+          <div class="card-meta">
+            <span class="tag tag-high">High</span>
+            <span class="tag tag-person">Scout</span>
+            <span class="tag tag-due">This week</span>
+          </div>
+        </div>
+        <div class="card card-priority-high">
+          <div class="card-title">1967 Shelby Cobra - Won't Start</div>
+          <div class="card-note">Battery few years old. Calling AAA Premier tomorrow for battery service at office.</div>
+          <div class="card-meta">
+            <span class="tag tag-high">High</span>
+            <span class="tag tag-person">Scout</span>
+            <span class="tag tag-due">Tomorrow</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- IN PROGRESS -->
+    <div class="column col-progress">
+      <div class="column-header">In Progress <span class="count">3</span></div>
+      <div class="cards">
+        <div class="card card-priority-high">
+          <div class="card-title">KG Decision Makers Research</div>
+          <div class="card-note">Top 50 done, 71 contacts found. Ranks 51-200 in progress.</div>
+          <div class="card-meta">
+            <span class="tag tag-high">High</span>
+            <span class="tag tag-person">Scout</span>
+          </div>
+        </div>
+        <div class="card card-priority-high">
+          <div class="card-title">AT&T Phone Upgrades</div>
+          <div class="card-note">2x iPhone 17 Pro Max 1TB. Escalated to 12 C-level execs. Oscar Lopez ignoring emails.</div>
+          <div class="card-meta">
+            <span class="tag tag-high">High</span>
+            <span class="tag tag-person">Scout</span>
+          </div>
+        </div>
+        <div class="card card-priority-high">
+          <div class="card-title">Title Company Outreach</div>
+          <div class="card-note">15 companies emailed 2/19. Need to follow up with non-responders.</div>
+          <div class="card-meta">
+            <span class="tag tag-high">High</span>
+            <span class="tag tag-person">Scout</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- WAITING ON -->
+    <div class="column col-waiting">
+      <div class="column-header">Waiting On <span class="count">5</span></div>
+      <div class="cards">
+        <div class="card card-priority-medium">
+          <div class="card-title">Suite Properties / Eric Email</div>
+          <div class="card-note">Escalation email sent. Eric visiting March 10-11. Awaiting response.</div>
+          <div class="card-meta">
+            <span class="tag tag-medium">Medium</span>
+            <span class="tag tag-person">Eric</span>
+          </div>
+        </div>
+        <div class="card card-priority-medium">
+          <div class="card-title">Engraven Card Design</div>
+          <div class="card-note">Emailed asking about shadow/depth effect on metal. Awaiting response.</div>
+          <div class="card-meta">
+            <span class="tag tag-medium">Medium</span>
+            <span class="tag tag-person">Engraven</span>
+          </div>
+        </div>
+        <div class="card card-priority-medium">
+          <div class="card-title">Jace.ai Cancellation</div>
+          <div class="card-note">Cancellation email sent. Awaiting confirmation + refund.</div>
+          <div class="card-meta">
+            <span class="tag tag-medium">Medium</span>
+            <span class="tag tag-person">Jace.ai</span>
+          </div>
+        </div>
+        <div class="card card-priority-medium">
+          <div class="card-title">Whoop x Chase Sapphire</div>
+          <div class="card-note">$359 annual plan via CSR = free year. Need to contact Whoop about plan switch.</div>
+          <div class="card-meta">
+            <span class="tag tag-medium">Medium</span>
+            <span class="tag tag-person">Scout</span>
+          </div>
+        </div>
+        <div class="card card-priority-low">
+          <div class="card-title">Suitcase Zipper Repair</div>
+          <div class="card-note">Foot Depot Encinitas. Senator has drop-off details.</div>
+          <div class="card-meta">
+            <span class="tag tag-low">Low</span>
+            <span class="tag tag-person">Senator</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RECURRING -->
+    <div class="column col-recurring">
+      <div class="column-header">Recurring / Auto <span class="count">3</span></div>
+      <div class="cards">
+        <div class="card card-priority-medium">
+          <div class="card-title">Email Triage</div>
+          <div class="card-note">Every 15 min. Auto-archive promos, forward financials to Ali.</div>
+          <div class="card-meta">
+            <span class="tag tag-medium">Active</span>
+            <span class="tag tag-person">Scout</span>
+          </div>
+        </div>
+        <div class="card card-priority-medium">
+          <div class="card-title">Daily Spend Report</div>
+          <div class="card-note">11 AM PST. Anthropic usage tracking. Alerts at 80%.</div>
+          <div class="card-meta">
+            <span class="tag tag-medium">Active</span>
+            <span class="tag tag-person">Scout</span>
+          </div>
+        </div>
+        <div class="card card-priority-low">
+          <div class="card-title">Points Transfer Scan</div>
+          <div class="card-note">8 AM PST daily. Alerts on RARE/GOOD deals only.</div>
+          <div class="card-meta">
+            <span class="tag tag-low">Active</span>
+            <span class="tag tag-person">Scout</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DONE -->
+    <div class="column col-done">
+      <div class="column-header">Done <span class="count">6</span></div>
+      <div class="cards">
+        <div class="card card-priority-high">
+          <div class="card-title">KG LinkedIn URLs (200)</div>
+          <div class="card-note">All 200 restaurant groups with LinkedIn pages. In master sheet.</div>
+          <div class="card-meta"><span class="tag tag-low">2/20</span></div>
+        </div>
+        <div class="card card-priority-high">
+          <div class="card-title">Gmail Full Access</div>
+          <div class="card-note">Send/read/compose working. Both emails connected.</div>
+          <div class="card-meta"><span class="tag tag-low">2/18</span></div>
+        </div>
+        <div class="card card-priority-medium">
+          <div class="card-title">Hotel Booking Cabo</div>
+          <div class="card-note">JW Marriott Los Cabos booked.</div>
+          <div class="card-meta"><span class="tag tag-low">2/17</span></div>
+        </div>
+        <div class="card card-priority-medium">
+          <div class="card-title">GSTOOC SOP</div>
+          <div class="card-note">Completed.</div>
+          <div class="card-meta"><span class="tag tag-low">2/16</span></div>
+        </div>
+        <div class="card card-priority-low">
+          <div class="card-title">LV Bag Repair</div>
+          <div class="card-note">LV Fashion Valley. Walk in, ships to repair.</div>
+          <div class="card-meta"><span class="tag tag-low">2/19</span></div>
+        </div>
+        <div class="card card-priority-medium">
+          <div class="card-title">Skills Inventory</div>
+          <div class="card-note">51 system + 18 user skills documented.</div>
+          <div class="card-meta"><span class="tag tag-low">2/22</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Simple hash-based password check (not military grade, but keeps casual browsers out)
+const HASH = '5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8'; // sha256 of password
+
+async function sha256(text) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(text);
+  const hash = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function checkPass() {
+  const input = document.getElementById('passInput').value;
+  const hash = await sha256(input);
+  if (hash === HASH) {
+    localStorage.setItem('scout_auth', 'true');
+    document.getElementById('gate').style.display = 'none';
+    document.getElementById('board').style.display = 'block';
+  } else {
+    document.getElementById('passError').style.display = 'block';
+    document.getElementById('passInput').value = '';
+  }
+}
+
+// Check if already authenticated
+if (localStorage.getItem('scout_auth') === 'true') {
+  document.getElementById('gate').style.display = 'none';
+  document.getElementById('board').style.display = 'block';
+}
+
+// Enter key support
+document.getElementById('passInput').addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') checkPass();
+});
+</script>
+</body>
+</html>

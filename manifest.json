@@ -1,0 +1,9 @@
+{
+  "name": "Scout Dashboard",
+  "short_name": "Scout",
+  "start_url": "/scout-dashboard/",
+  "display": "standalone",
+  "background_color": "#0d1117",
+  "theme_color": "#c9a84c",
+  "icons": []
+}
