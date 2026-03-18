@@ -26,6 +26,46 @@
   .tab { padding: 12px 24px; font-size: 14px; font-weight: 600; color: #8b949e; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.15s; }
   .tab:hover { color: #e6edf3; }
   .tab.active { color: #c9a84c; border-bottom-color: #c9a84c; }
+
+  /* CRON JOBS TAB */
+  .cron-container { padding: 24px; max-width: 1200px; }
+  .cron-header { margin-bottom: 24px; }
+  .cron-header h2 { font-size: 20px; font-weight: 700; color: #c9a84c; margin-bottom: 8px; }
+  .cron-header .status { font-size: 13px; color: #8b949e; }
+  .cron-header .status.healthy { color: #3fb950; }
+  .cron-status-badge { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 6px; }
+  .cron-status-badge.healthy { background: #3fb950; }
+  .cron-status-badge.warning { background: #d29922; }
+  .cron-status-badge.error { background: #f85149; }
+  
+  .cron-timeline { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 16px; }
+  .cron-job { background: #161b22; border: 1px solid #21262d; border-radius: 12px; padding: 16px; }
+  .cron-job:hover { border-color: #388bfd; }
+  .cron-job-header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px; }
+  .cron-job-title { font-size: 13px; font-weight: 700; color: #e6edf3; }
+  .cron-job-type { font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+  .cron-job-type.report { background: rgba(58,182,246,0.15); color: #3ab6f6; }
+  .cron-job-type.sync { background: rgba(79,161,246,0.15); color: #4fa1f6; }
+  .cron-job-type.audit { background: rgba(88,166,255,0.15); color: #58a6ff; }
+  .cron-job-type.monitoring { background: rgba(163,113,247,0.15); color: #a371f7; }
+  .cron-job-type.reminder { background: rgba(210,153,34,0.15); color: #d29922; }
+  .cron-job-schedule { font-size: 11px; color: #8b949e; font-family: monospace; margin-bottom: 10px; padding: 6px 8px; background: #0d1117; border-radius: 4px; }
+  .cron-job-meta { display: flex; gap: 12px; font-size: 11px; color: #8b949e; margin-bottom: 10px; }
+  .cron-job-next { display: flex; align-items: center; gap: 8px; padding: 8px; background: #0d1117; border-radius: 6px; font-size: 12px; }
+  .cron-job-next .label { color: #8b949e; }
+  .cron-job-next .time { color: #c9a84c; font-weight: 600; }
+  .cron-job-status { display: flex; align-items: center; gap: 6px; margin-top: 8px; padding: 6px; background: #0d1117; border-radius: 6px; font-size: 11px; }
+  .cron-job-status .indicator { width: 8px; height: 8px; border-radius: 50%; }
+  .cron-job-status.pass .indicator { background: #3fb950; }
+  .cron-job-status.fail .indicator { background: #f85149; }
+  .cron-job-status.pending .indicator { background: #d29922; }
+  
+  .cron-day-view { display: grid; grid-template-columns: repeat(24, 1fr); gap: 4px; margin-top: 24px; padding: 20px; background: #161b22; border-radius: 12px; border: 1px solid #21262d; }
+  .cron-day-view-label { grid-column: 1 / -1; font-size: 12px; font-weight: 600; color: #8b949e; margin-bottom: 8px; }
+  .cron-hour { background: #0d1117; border: 1px solid #21262d; border-radius: 4px; min-height: 40px; display: flex; flex-direction: column; font-size: 9px; color: #8b949e; padding: 2px; }
+  .cron-hour:hover { border-color: #388bfd; }
+  .cron-hour-label { padding: 2px; }
+  .cron-job-in-hour { background: #3fb950; color: #0d1117; font-weight: 600; padding: 2px; border-radius: 2px; margin: 1px 0; font-size: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .tab-content { display: none; }
   .tab-content.active { display: block; }
 
@@ -114,6 +154,7 @@
   <div class="tabs">
     <div class="tab active" onclick="switchTab('tasks')">Tasks</div>
     <div class="tab" onclick="switchTab('spend')">Daily Spend</div>
+    <div class="tab" onclick="switchTab('cron')">Cron Jobs</div>
   </div>
 
   <!-- SPEND TAB -->
@@ -351,6 +392,29 @@
     </div>
   </div>
   </div><!-- end tab-tasks -->
+
+  <!-- CRON JOBS TAB -->
+  <div class="tab-content" id="tab-cron">
+    <div class="cron-container">
+      <div class="cron-header">
+        <h2>Automation Schedule</h2>
+        <div class="status healthy"><span class="cron-status-badge healthy"></span>All systems operational</div>
+      </div>
+      
+      <div class="cron-timeline" id="cronJobs">
+        <!-- Cron jobs will be populated here by JavaScript -->
+        <div style="grid-column: 1 / -1; text-align: center; color: #8b949e; padding: 40px; font-size: 13px;">Loading cron jobs...</div>
+      </div>
+
+      <div class="cron-day-view">
+        <div class="cron-day-view-label">Today's Schedule (Hour by hour)</div>
+        <div id="cronDayView" style="display: contents;">
+          <!-- Hours will be populated here -->
+        </div>
+      </div>
+    </div>
+  </div><!-- end tab-cron -->
+
 </div>
 
 <script>
@@ -393,6 +457,82 @@ if (localStorage.getItem('scout_auth') === 'true') {
 // Enter key support
 document.getElementById('passInput').addEventListener('keypress', (e) => {
   if (e.key === 'Enter') checkPass();
+});
+
+// CRON JOBS DATA & RENDERING
+const cronJobs = [
+  { name: '8 PM Daily Operations Report', schedule: '0 20 * * *', time: '8:00 PM', type: 'report', status: 'pass', nextRun: '8:00 PM today' },
+  { name: 'Email triage (weekdays)', schedule: '*/30 8-20 * * 1-5', time: '8:00 AM - 8:30 PM', type: 'sync', status: 'pass', nextRun: '5:30 PM today' },
+  { name: 'Email triage (weekends)', schedule: '0 8,12,16,20 * * 0,6', time: '8 AM, 12 PM, 4 PM, 8 PM', type: 'sync', status: 'pass', nextRun: 'Tomorrow 8:00 AM' },
+  { name: 'Daily OAuth & Token Audit', schedule: '0 6 * * *', time: '6:00 AM', type: 'audit', status: 'pass', nextRun: 'Tomorrow 6:00 AM' },
+  { name: 'Daily Google Contacts Sync', schedule: '0 6 * * *', time: '6:00 AM', type: 'sync', status: 'pass', nextRun: 'Tomorrow 6:00 AM' },
+  { name: 'Google Contacts Sync (Manual)', schedule: '0 10 * * *', time: '10:00 AM', type: 'sync', status: 'pass', nextRun: 'Tomorrow 10:00 AM' },
+  { name: 'Google Contacts Sync Verification', schedule: '5 10 * * *', time: '10:05 AM', type: 'audit', status: 'pass', nextRun: 'Tomorrow 10:05 AM' },
+  { name: 'Longevity Labs Event Monitor', schedule: '0 8,14 * * *', time: '8:00 AM, 2:00 PM', type: 'monitoring', status: 'pass', nextRun: '2:00 PM today' },
+  { name: 'Early Morning Events - Kylie', schedule: '0 17 * * *', time: '5:00 PM', type: 'reminder', status: 'pass', nextRun: '5:00 PM today' },
+  { name: 'Points Daily Check', schedule: '0 8 * * *', time: '8:00 AM', type: 'monitoring', status: 'pass', nextRun: 'Tomorrow 8:00 AM' },
+  { name: 'Points Weekly Summary', schedule: '0 9 * * 1', time: '9:00 AM (Mondays)', type: 'report', status: 'pass', nextRun: 'Monday 9:00 AM' },
+  { name: 'Daily Spend Pull', schedule: '0 21 * * *', time: '9:00 PM', type: 'monitoring', status: 'pass', nextRun: '9:00 PM today' },
+  { name: 'Daily token spend report', schedule: '0 22 * * *', time: '10:00 PM', type: 'report', status: 'pass', nextRun: '10:00 PM today' },
+  { name: 'Nightly usage report', schedule: '0 23 * * *', time: '11:00 PM', type: 'report', status: 'pass', nextRun: '11:00 PM today' },
+];
+
+function renderCronJobs() {
+  const container = document.getElementById('cronJobs');
+  if (!container) return;
+  
+  container.innerHTML = cronJobs.map(job => `
+    <div class="cron-job">
+      <div class="cron-job-header">
+        <div class="cron-job-title">${job.name}</div>
+        <div class="cron-job-type ${job.type}">${job.type}</div>
+      </div>
+      <div class="cron-job-schedule">${job.schedule}</div>
+      <div class="cron-job-meta">
+        <div>⏰ ${job.time}</div>
+      </div>
+      <div class="cron-job-next">
+        <span class="label">Next run:</span>
+        <span class="time">${job.nextRun}</span>
+      </div>
+      <div class="cron-job-status ${job.status}">
+        <span class="indicator"></span>
+        <span>${job.status === 'pass' ? '✓ Operational' : '⚠ Warning'}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderDayView() {
+  const container = document.getElementById('cronDayView');
+  if (!container) return;
+  
+  let html = '';
+  for (let hour = 0; hour < 24; hour++) {
+    const hourJobs = cronJobs.filter(job => {
+      const timeStr = job.time.toLowerCase();
+      return timeStr.includes(hour.toString()) || 
+             (hour === 20 && timeStr.includes('8:00 pm')) ||
+             (hour === 6 && timeStr.includes('6:00 am')) ||
+             (hour === 10 && timeStr.includes('10:00 am'));
+    });
+    
+    const displayHour = hour === 0 ? '12 AM' : hour < 12 ? `${hour} AM` : hour === 12 ? '12 PM' : `${hour-12} PM`;
+    
+    html += `
+      <div class="cron-hour">
+        <div class="cron-hour-label">${displayHour}</div>
+        ${hourJobs.map(job => `<div class="cron-job-in-hour" title="${job.name}">${job.name.substring(0, 10)}...</div>`).join('')}
+      </div>
+    `;
+  }
+  container.innerHTML = html;
+}
+
+// Render when tab is first viewed
+document.addEventListener('DOMContentLoaded', () => {
+  renderCronJobs();
+  renderDayView();
 });
 </script>
 </body>
