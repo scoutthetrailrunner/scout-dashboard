@@ -152,6 +152,7 @@
   <div class="header">
     <h1>Scout Dashboard</h1>
     <div class="stats">Last updated: Mar 4, 2026 12:20 PM PST</div>
+    <button onclick="logout()" style="background: #f85149; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer;">Logout</button>
   </div>
 
   <div class="tabs">
@@ -546,6 +547,14 @@ function renderDayView() {
     `;
   }
   container.innerHTML = html;
+}
+
+// Logout function
+function logout() {
+  if (confirm('Are you sure you want to logout?')) {
+    localStorage.removeItem('scout_auth');
+    location.reload();
+  }
 }
 
 // Render when tab is first viewed
