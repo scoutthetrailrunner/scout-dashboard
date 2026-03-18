@@ -60,12 +60,15 @@
   .cron-job-status.fail .indicator { background: #f85149; }
   .cron-job-status.pending .indicator { background: #d29922; }
   
-  .cron-day-view { display: grid; grid-template-columns: repeat(24, 1fr); gap: 4px; margin-top: 24px; padding: 20px; background: #161b22; border-radius: 12px; border: 1px solid #21262d; }
-  .cron-day-view-label { grid-column: 1 / -1; font-size: 12px; font-weight: 600; color: #8b949e; margin-bottom: 8px; }
-  .cron-hour { background: #0d1117; border: 1px solid #21262d; border-radius: 4px; min-height: 40px; display: flex; flex-direction: column; font-size: 9px; color: #8b949e; padding: 2px; }
+  .cron-day-view { margin-top: 24px; padding: 20px; background: #161b22; border-radius: 12px; border: 1px solid #21262d; }
+  .cron-day-view-label { font-size: 12px; font-weight: 600; color: #8b949e; margin-bottom: 16px; }
+  .cron-hours-grid { display: grid; grid-template-columns: 80px 1fr; gap: 12px; max-height: 500px; overflow-y: auto; }
+  .cron-hour { background: #0d1117; border: 1px solid #21262d; border-radius: 6px; padding: 12px; display: flex; flex-direction: column; gap: 6px; }
   .cron-hour:hover { border-color: #388bfd; }
-  .cron-hour-label { padding: 2px; }
-  .cron-job-in-hour { background: #3fb950; color: #0d1117; font-weight: 600; padding: 2px; border-radius: 2px; margin: 1px 0; font-size: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cron-hour-label { font-size: 12px; font-weight: 600; color: #c9a84c; text-align: center; padding: 8px; background: #161b22; border-radius: 4px; }
+  .cron-hour-jobs { display: flex; flex-wrap: wrap; gap: 6px; }
+  .cron-job-in-hour { background: #3fb950; color: #0d1117; font-weight: 600; padding: 4px 8px; border-radius: 4px; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cron-hour-empty { color: #8b949e; font-size: 12px; padding: 8px; }
   .tab-content { display: none; }
   .tab-content.active { display: block; }
 
@@ -408,7 +411,7 @@
 
       <div class="cron-day-view">
         <div class="cron-day-view-label">Today's Schedule (Hour by hour)</div>
-        <div id="cronDayView" style="display: contents;">
+        <div class="cron-hours-grid" id="cronDayView">
           <!-- Hours will be populated here -->
         </div>
       </div>
@@ -507,22 +510,38 @@ function renderDayView() {
   const container = document.getElementById('cronDayView');
   if (!container) return;
   
+  const hourMap = {
+    '6:00 am': 6,
+    '8:00 am': 8,
+    '10:00 am': 10,
+    '5:00 pm': 17,
+    '8:00 pm': 20,
+    '9:00 pm': 21,
+    '10:00 pm': 22,
+    '11:00 pm': 23
+  };
+  
   let html = '';
   for (let hour = 0; hour < 24; hour++) {
     const hourJobs = cronJobs.filter(job => {
       const timeStr = job.time.toLowerCase();
-      return timeStr.includes(hour.toString()) || 
-             (hour === 20 && timeStr.includes('8:00 pm')) ||
-             (hour === 6 && timeStr.includes('6:00 am')) ||
-             (hour === 10 && timeStr.includes('10:00 am'));
+      // Match exact hour times
+      for (let [timeLabel, h] of Object.entries(hourMap)) {
+        if (timeStr.includes(timeLabel) && h === hour) return true;
+      }
+      // Match ranges like "8 AM - 8 PM" or "8 AM, 2 PM"
+      if (timeStr.includes(`${hour % 12 || 12}:00`) || timeStr.includes(`, ${hour % 12 || 12}`)) return true;
+      return false;
     });
     
     const displayHour = hour === 0 ? '12 AM' : hour < 12 ? `${hour} AM` : hour === 12 ? '12 PM' : `${hour-12} PM`;
     
     html += `
+      <div class="cron-hour-label">${displayHour}</div>
       <div class="cron-hour">
-        <div class="cron-hour-label">${displayHour}</div>
-        ${hourJobs.map(job => `<div class="cron-job-in-hour" title="${job.name}">${job.name.substring(0, 10)}...</div>`).join('')}
+        <div class="cron-hour-jobs">
+          ${hourJobs.length > 0 ? hourJobs.map(job => `<div class="cron-job-in-hour" title="${job.name}">${job.name}</div>`).join('') : '<div class="cron-hour-empty">—</div>'}
+        </div>
       </div>
     `;
   }
